@@ -20,7 +20,7 @@ with model:
     # Connect the input signal to the neuron
     nengo.Connection(sin_node, neurons)
 
-    nengo.Probe(sin_node)  # The original input
-    nengo.Probe(neurons, 'voltage')  # The original input
-    nengo.Probe(neurons, 'spikes')  # The raw spikes from the neuron
-    nengo.Probe(neurons, synapse=0.01)  # The raw spikes from the neuron # No label because testing!
+    #nengo.Probe(sin_node)  # The original input
+    #nengo.Probe(neurons, 'voltage')  # The original input
+    #nengo.Probe(neurons, 'spikes')  # The raw spikes from the neuron
+    nengo.Probe(neurons, synapse=0.01)  # The raw spikes from the neuron
