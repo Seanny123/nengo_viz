@@ -100,7 +100,10 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         simulator.step()
         probes = {}
         for probe in simulator.model.probes:
-            probes[id(probe)] = list(simulator.data[probe][-1])
+            if(probe.target.label == None):
+                probes[id(probe)] = {"data":simulator.data[probe][-1]}
+            else:
+                probes[id(probe)] = {"data":simulator.data[probe][-1], "label":pr.target.label}
         data = {
             't': simulator.n_steps * simulator.model.dt,
             'probes': probes,

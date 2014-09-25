@@ -1,3 +1,5 @@
+// TODO: Figure out where the layout load is going to happen.
+
 function stream() {
         console.log("create websocket...")
         //var ws = new WebSocket("ws://" + window.location.host + "/simulate?Id=123456789");
@@ -18,6 +20,7 @@ function stream() {
             });
             $("#simulation #probes").text(probe_data.join("\n"));
             console.log("Message is received.");
+            // TODO: Send the sliders that need to be passed and the current time
         };
         ws.onclose = function() { 
             console.log("Connection is closed.");
