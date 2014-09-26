@@ -5,7 +5,7 @@
     BSD license: http://opensource.org/licenses/BSD-3-Clause
 */
 
-d3.slider = function module() {
+d3.slider = function module(sliderName, webSocket) {
   "use strict";
 
   // Public variables width default settings
@@ -18,7 +18,8 @@ d3.slider = function module() {
       margin = 50,
       value,
       active = 1,
-      scale;
+      scale,
+      name = sliderName;
 
   // Private variables
   var axisScale,
@@ -238,6 +239,8 @@ d3.slider = function module() {
           }
         }
 
+        console.log("Sending the input!")
+        webSocket.send({name:slider.name(), value:slider.value()})
       }
 
 
@@ -302,6 +305,12 @@ d3.slider = function module() {
   slider.min = function(_) {
     if (!arguments.length) return min;
     min = _;
+    return slider;
+  };
+
+  slider.name = function(_) {
+    if (!arguments.length) return name;
+    name = _;
     return slider;
   };
 

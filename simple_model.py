@@ -14,5 +14,5 @@ with model:
     nengo.Connection(input, neurons, synapse=0.01)
 
     nengo.Probe(input)  # The original input
-    nengo.Probe(neurons, 'spikes')  # Raw spikes from each neuron
-    nengo.Probe(neurons)
+    nengo.Probe(neurons.neurons, 'spikes')  # Raw spikes from each neuron
+    nengo.Probe(neurons.neurons)

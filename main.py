@@ -20,13 +20,39 @@ import time
 
 import nengo_helper
 import nengo
+import viz
 
 clients = dict() # How do I put this inside SimulationHandler?
+
+import sys
 
 def isidentifier(s):
     if s in keyword.kwlist:
         return False
     return re.match(r'^[a-z_][a-z0-9_]*$', s, re.I) is not None
+
+# There should really be a model object that holds the model and stuff
+
+# A function that will return the result of the original function, unless it has ben overriden
+class OverrideFunction:
+    def __init__(self, original_function):
+        self.original_function = original_function
+        self.override_value = None
+    def set_value(self, value):    # override the value
+        self.override_value = value
+    def __call__(self, t):
+        if self.override_value is None:
+            return self.original_function(t)
+        else:
+            return self.override_value
+        
+# go through the network changing all of the original functions into overrideable ones
+my_overrides = {}
+for node in model.all_nodes:
+    if node.size_in == 0:
+        override = OverrideFunction(node.output)
+        my_overrides[node] = override
+        node.output = override
 
 class MainHandler(tornado.web.RequestHandler):
     """Request handler for the main landing page."""
@@ -56,29 +82,16 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         self.stream.set_nodelay(True)
         clients[self.id] = {"id": self.id, "object": self}
         self._is_closed = False
-        print("done opening")
 
-    # Websockets might be asynchronous by default
-    #@tornado.web.asynchronous
-    # the generator engine was selected since it has the most cross-platform compatibility
-    #@gen.coroutine
-    def on_message(self, message):
-        """Asynchronously streams the simulation data."""
-        # Read in the code and set the variables
         print("Message time")
 
         code = open("my_model.py","r").read()
         dt = 0.001
 
         # Build the model and simulator
-        model = ModelHandler.get_model(code)
-        simulator = nengo.Simulator(model, dt)
+        self._model = ModelHandler.get_model(code)
+        simulator = nengo.Simulator(self._model, dt)
 
-        """
-        while(True):
-            time.sleep(1)
-            self.write_message(u"You said: " + message)
-        """
         # At first connection, send a list of all the probes and the labels
         # of their associated nodes, so that the vizualizer has an idea of what
         # can be shown
@@ -88,6 +101,8 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             # In the basic streaming context, there is no need for generators, but in the context where we are dealing with other requests simultaneously, it starts to make a lot more sense that you would want to know exaclty how many steps to simulate and you would want to process them asynchronously
             #data = yield gen.Task(self._step, simulator)
             data = self._step(simulator)
+            time.sleep(0.05)
+            #import ipdb; ipdb.set_trace()
             logging.debug('Connection (%d): %s', id(self), data)
             # Write the response out
             response = {"length":len(data), "data":data}
@@ -95,15 +110,29 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             self.write_message(response)
             #self.flush()
 
+
+    # Websockets might be asynchronous by default
+    #@tornado.web.asynchronous
+    # the generator engine was selected since it has the most cross-platform compatibility
+    #@gen.coroutine
+    def on_message(self, message):
+        """Receive the input information"""
+        message = json.loads(message)
+        #viz.OverrideFunction()
+
+
     def _step(self, simulator):#, callback):
         """Advances the simulator one step, and then invokes callback(data)."""
         simulator.step()
         probes = {}
         for probe in simulator.model.probes:
-            if(probe.target.label == None):
-                probes[id(probe)] = {"data":simulator.data[probe][-1]}
+            if(type(probe.target) == nengo.node.Node and hasattr(probe.target, 'label')):
+                probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.label}
+            elif(type(probe.target) == nengo.ensemble.Neurons and hasattr(probe.target.ensemble, 'label')):
+                probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.ensemble.label}
             else:
-                probes[id(probe)] = {"data":simulator.data[probe][-1], "label":pr.target.label}
+                probes[id(probe)] = {"data":simulator.data[probe][-1].tolist()}
+
         data = {
             't': simulator.n_steps * simulator.model.dt,
             'probes': probes,
