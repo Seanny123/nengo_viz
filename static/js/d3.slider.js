@@ -5,6 +5,11 @@
     BSD license: http://opensource.org/licenses/BSD-3-Clause
 */
 
+// TODO: Add the ability to change the range of the slider by clicking on the numbers at the end
+// or I guess just a context menu if you want to be lame
+// also give an option to set the value and read it from a file
+// maybe look at tangle.js for this?
+
 d3.slider = function module(sliderName, webSocket) {
   "use strict";
 

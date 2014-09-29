@@ -38,6 +38,8 @@ class OverrideFunction:
     def __init__(self, original_function):
         self.original_function = original_function
         self.override_value = None
+    # Not really used, since we create a new override function every time to change an input
+    # Maybe we _should_ be using this?
     def set_value(self, value):    # override the value
         self.override_value = value
     def __call__(self, t):
@@ -45,14 +47,6 @@ class OverrideFunction:
             return self.original_function(t)
         else:
             return self.override_value
-        
-# go through the network changing all of the original functions into overrideable ones
-my_overrides = {}
-for node in model.all_nodes:
-    if node.size_in == 0:
-        override = OverrideFunction(node.output)
-        my_overrides[node] = override
-        node.output = override
 
 class MainHandler(tornado.web.RequestHandler):
     """Request handler for the main landing page."""
@@ -92,10 +86,6 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         self._model = ModelHandler.get_model(code)
         simulator = nengo.Simulator(self._model, dt)
 
-        # At first connection, send a list of all the probes and the labels
-        # of their associated nodes, so that the vizualizer has an idea of what
-        # can be shown
-
         # Maintain an active connection, blocking only during each step
         while not self._is_closed:
             # In the basic streaming context, there is no need for generators, but in the context where we are dealing with other requests simultaneously, it starts to make a lot more sense that you would want to know exaclty how many steps to simulate and you would want to process them asynchronously
@@ -118,7 +108,15 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         """Receive the input information"""
         message = json.loads(message)
-        #viz.OverrideFunction()
+
+
+        # go through the network changing all of the original functions into overrideable ones
+        my_overrides = {}
+        for node in _model.all_nodes:
+            if node.size_in == 0 and node.size_out > 1:
+                override = OverrideFunction(node.output)
+                my_overrides[node] = override
+                node.output = override
 
 
     def _step(self, simulator):#, callback):
@@ -126,6 +124,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         simulator.step()
         probes = {}
         for probe in simulator.model.probes:
+            # Might be able to simplify this code by using NameFinder?
             if(type(probe.target) == nengo.node.Node and hasattr(probe.target, 'label')):
                 probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.label}
             elif(type(probe.target) == nengo.ensemble.Neurons and hasattr(probe.target.ensemble, 'label')):
