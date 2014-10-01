@@ -19,8 +19,11 @@ import keyword
 import time
 
 import nengo_helper
+
 import nengo
 import viz
+import nengo_viz.config
+import nengo_viz.converter
 
 clients = dict() # How do I put this inside SimulationHandler?
 
@@ -52,20 +55,39 @@ class MainHandler(tornado.web.RequestHandler):
     """Request handler for the main landing page."""
     @tornado.web.asynchronous
     def get(self):
+        code = open("my_model.py","r").read()
+        model_container.gen_model(code)
         self.render('index.html')
 
+class ModelHandler(tornado.web.RequestHandler):
+    """Giving the JSON"""
+    def post(self):
+        self.write(model_container.get_json())
 
-class ModelHandler(object):
+class ModelContainer(object):
+
+    def __init__(self):
+        self.model = None
+        self.locals = None
+        self.code = None
 
     @classmethod
-    def get_model(cls, code, filename='error_msgs.txt'):
+    def gen_model(self, code, filename='error_msgs.txt'):
+        self.code = code
         c = compile(code.replace('\r\n', '\n'), filename, 'exec')
         locals = {}
         # apparently using globals causes this to break?
         exec c in locals
-        return locals['model']
 
-# Note that websockets aren't really used here, since it is assumed that only one browser will want to view the simulation at a time
+        self.model = locals['model']
+        self.locals = locals
+
+    @classmethod
+    def get_json(self):
+        conv = nengo_viz.converter.Converter(self.model, self.code.splitlines(), self.locals, nengo_viz.config.Config())
+        return conv.to_json()
+
+# Note that the broadcast function of websockets aren't really used here, since it is assumed that only one browser will want to view the simulation at a time
 class SimulationHandler(tornado.websocket.WebSocketHandler):
     """Request handler for streaming simulation data."""
 
@@ -78,14 +100,12 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         self._is_closed = False
 
         print("Message time")
-
-        code = open("my_model.py","r").read()
         dt = 0.001
 
         # Build the model and simulator
-        self._model = ModelHandler.get_model(code)
-        simulator = nengo.Simulator(self._model, dt)
-
+        simulator = nengo.Simulator(model_container.model, dt)
+        # Return the JSON
+        self.write_message(model_container.get_json())
         # Maintain an active connection, blocking only during each step
         while not self._is_closed:
             # In the basic streaming context, there is no need for generators, but in the context where we are dealing with other requests simultaneously, it starts to make a lot more sense that you would want to know exaclty how many steps to simulate and you would want to process them asynchronously
@@ -112,7 +132,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
 
         # go through the network changing all of the original functions into overrideable ones
         my_overrides = {}
-        for node in _model.all_nodes:
+        for node in model_container.all_nodes:
             if node.size_in == 0 and node.size_out > 1:
                 override = OverrideFunction(node.output)
                 my_overrides[node] = override
@@ -124,7 +144,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         simulator.step()
         probes = {}
         for probe in simulator.model.probes:
-            # Might be able to simplify this code by using NameFinder?
+            # Might be able to simplify this code by using NameFinder 
             if(type(probe.target) == nengo.node.Node and hasattr(probe.target, 'label')):
                 probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.label}
             elif(type(probe.target) == nengo.ensemble.Neurons and hasattr(probe.target.ensemble, 'label')):
@@ -165,10 +185,14 @@ settings = {
     'debug': True,
 }
 
+# I want to rename graph.json to something that better describes what it's sending to the front end
 application = Application([
     (r'/', MainHandler),
     (r'/simulate', SimulationHandler),
+    (r'/graph.json', ModelHandler),
 ], **settings)
+
+model_container = ModelContainer()
 
 
 if __name__ == '__main__':

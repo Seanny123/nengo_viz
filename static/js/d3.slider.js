@@ -10,6 +10,8 @@
 // also give an option to set the value and read it from a file
 // maybe look at tangle.js for this?
 
+console.log("Hello!")
+
 d3.slider = function module(sliderName, webSocket) {
   "use strict";
 
@@ -310,12 +312,6 @@ d3.slider = function module(sliderName, webSocket) {
   slider.min = function(_) {
     if (!arguments.length) return min;
     min = _;
-    return slider;
-  };
-
-  slider.name = function(_) {
-    if (!arguments.length) return name;
-    name = _;
     return slider;
   };
 

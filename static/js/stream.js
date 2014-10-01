@@ -1,7 +1,7 @@
 // TODO: Figure out where the layout load is going to happen.
 
 function stream(ws) {
-        //var probe_data = [];
+        var probe_data = [];
         ws.onopen = function() {
             console.log("Opening connection...")
         };

@@ -5,8 +5,8 @@
 
 <script src="static/js/jquery-1.11.0.min.js" type="text/javascript"></script>
 <script src="static/js/stream.js" type="text/javascript"></script>
-<script src="static/js/d3.slider.js"></script>
 <script src="static/js/d3.min.js"></script>
+<script src="static/js/d3.slider.js"></script>
 
 <style type="text/css" media="screen">
     #simulation {
@@ -52,6 +52,8 @@
 <script>
 var n = 40;
 var myData = d3.range(n);
+var model_json;
+var form_data = new FormData(); //I have no idea what this is used for
 
 var margin = {top: 20, right: 20, bottom: 20, left: 40},
     width = 960 - margin.left - margin.right,
@@ -97,15 +99,25 @@ var path = svg.append("g")
     .attr("class", "line")
     .attr("d", line);
 
-$(document).ready(function() {
+console.log("getting the JSON of the model");
+var xhr = new XMLHttpRequest();
+xhr.open('POST', '/graph.json', true);
+xhr.onload = update_graph; // this is an asynchronous callback
+xhr.send(form_data); // Why can't I send an empty request?
+
+function update_graph(){
+    model_json = JSON.parse(this.responseText)
+    console.log(JSON.parse(this.responseText))
+
     console.log("create websocket...")
     // I really need to figure out a way to not hard-code the socket
     //var ws = new WebSocket("ws://" + window.location.host + "/simulate?Id=123456789");
     var ws = new WebSocket("ws://localhost:8080/simulate?Id=123456789");
     console.log("WebSocket created.")
-    stream(ws);
+    //stream(ws);
     d3.select('#slider8').call(d3.slider(ws,"solitary_slider").value(50).orientation("vertical"));
-});
+
+}
 </script>
 
 </body>
