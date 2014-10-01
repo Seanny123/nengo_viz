@@ -10,7 +10,7 @@
 // also give an option to set the value and read it from a file
 // maybe look at tangle.js for this?
 
-console.log("Hello!")
+console.log("Hello Face!")
 
 d3.slider = function module(sliderName, webSocket) {
   "use strict";

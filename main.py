@@ -34,8 +34,6 @@ def isidentifier(s):
         return False
     return re.match(r'^[a-z_][a-z0-9_]*$', s, re.I) is not None
 
-# There should really be a model object that holds the model and stuff
-
 # A function that will return the result of the original function, unless it has ben overriden
 class OverrideFunction:
     def __init__(self, original_function):
@@ -104,8 +102,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
 
         # Build the model and simulator
         simulator = nengo.Simulator(model_container.model, dt)
-        # Return the JSON
-        self.write_message(model_container.get_json())
+
         # Maintain an active connection, blocking only during each step
         while not self._is_closed:
             # In the basic streaming context, there is no need for generators, but in the context where we are dealing with other requests simultaneously, it starts to make a lot more sense that you would want to know exaclty how many steps to simulate and you would want to process them asynchronously
