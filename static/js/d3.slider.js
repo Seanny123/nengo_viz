@@ -10,9 +10,7 @@
 // also give an option to set the value and read it from a file
 // maybe look at tangle.js for this?
 
-console.log("Hello Face!")
-
-d3.slider = function module(sliderName, webSocket) {
+d3.slider = function sliderModule(sliderName, webSocket) {
   "use strict";
 
   // Public variables width default settings
@@ -26,7 +24,7 @@ d3.slider = function module(sliderName, webSocket) {
       value,
       active = 1,
       scale,
-      name = sliderName;
+      id = sliderName;
 
   // Private variables
   var axisScale,
@@ -245,9 +243,9 @@ d3.slider = function module(sliderName, webSocket) {
             }
           }
         }
-
-        console.log("Sending the input!")
-        webSocket.send({name:slider.name(), value:slider.value()})
+        console.log(sliderName);
+        webSocket.send(JSON.stringify({"name":sliderName, "val":slider.value()}));
+        console.log(slider.value());
       }
 
 
@@ -327,6 +325,12 @@ d3.slider = function module(sliderName, webSocket) {
     return slider;
   };
 
+  slider.id = function(_) {
+    if (!arguments.length) return id;
+    id = _;
+    return id;
+  };
+
   slider.animate = function(_) {
     if (!arguments.length) return animate;
     animate = _;
@@ -368,5 +372,3 @@ d3.slider = function module(sliderName, webSocket) {
   return slider;
 
 };
-
-

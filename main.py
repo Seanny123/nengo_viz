@@ -17,6 +17,8 @@ import webbrowser
 import re
 import keyword
 import time
+import thread
+import threading
 
 import nengo_helper
 
@@ -24,8 +26,7 @@ import nengo
 import viz
 import nengo_viz.config
 import nengo_viz.converter
-
-clients = dict() # How do I put this inside SimulationHandler?
+import ipdb
 
 import sys
 
@@ -69,8 +70,8 @@ class ModelContainer(object):
         self.locals = None
         self.code = None
 
-    @classmethod
     def gen_model(self, code, filename='error_msgs.txt'):
+        print("Making the model")
         self.code = code
         c = compile(code.replace('\r\n', '\n'), filename, 'exec')
         locals = {}
@@ -80,7 +81,6 @@ class ModelContainer(object):
         self.model = locals['model']
         self.locals = locals
 
-    @classmethod
     def get_json(self):
         conv = nengo_viz.converter.Converter(self.model, self.code.splitlines(), self.locals, nengo_viz.config.Config())
         return conv.to_json()
@@ -89,74 +89,73 @@ class ModelContainer(object):
 class SimulationHandler(tornado.websocket.WebSocketHandler):
     """Request handler for streaming simulation data."""
 
+    def __init__(self, *args, **kwargs):
+        print("Hello from SimulationHandler")
+        super(SimulationHandler, self).__init__(*args, **kwargs)
+        self.clients = dict()
+        self.simulator_lock = threading.Lock()
+
     def open(self, *args):
         """Callback for when the connection is opened."""
         print("Connection opened")
         self.id = self.get_argument("Id")
         self.stream.set_nodelay(True)
-        clients[self.id] = {"id": self.id, "object": self}
+        #self.clients[self.id] = {"id": self.id, "object": self} # Not necessary?
         self._is_closed = False
 
         print("Message time")
         dt = 0.001
 
         # Build the model and simulator
+        # Maintain an active connection, blocking only during each step # This is going to open a new simulation for every new connection. Is that the behaviour we want? # I think we might need to use multithreading here # Goddamn producer consumer problem
         simulator = nengo.Simulator(model_container.model, dt)
+        sim_thread = threading.Thread(target=self._run_simulator, args=(simulator,))
+        sim_thread.daemon = True #So that I can terminate the program easily
+        sim_thread.start()
 
-        # Maintain an active connection, blocking only during each step
+
+    def _run_simulator(self, simulator):
+        """Advances the simulator one step, and then invokes callback(data)."""
         while not self._is_closed:
-            # In the basic streaming context, there is no need for generators, but in the context where we are dealing with other requests simultaneously, it starts to make a lot more sense that you would want to know exaclty how many steps to simulate and you would want to process them asynchronously
-            #data = yield gen.Task(self._step, simulator)
-            data = self._step(simulator)
-            time.sleep(0.05)
-            #import ipdb; ipdb.set_trace()
+            self.simulator_lock.acquire()
+            simulator.step()
+            self.simulator_lock.release()
+            probes = dict()
+            for probe in simulator.model.probes:
+                # Might be able to simplify this code by using NameFinder? It does seem to be appearing twice? 
+                if(type(probe.target) == nengo.node.Node and hasattr(probe.target, 'label')):
+                    probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.label}
+                elif(type(probe.target) == nengo.ensemble.Neurons and hasattr(probe.target.ensemble, 'label')):
+                    probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.ensemble.label}
+                else:
+                    probes[id(probe)] = {"data":simulator.data[probe][-1].tolist()}
+
+            data = {
+                't': simulator.n_steps * simulator.model.dt,
+                'probes': probes,
+            }
+            time.sleep(0.5)
             logging.debug('Connection (%d): %s', id(self), data)
             # Write the response out
             response = {"length":len(data), "data":data}
-            print(type(response))
+            #print(type(response)) #It's a dict type but it's still not being sent as JSON.
             self.write_message(response)
-            #self.flush()
 
-
-    # Websockets might be asynchronous by default
-    #@tornado.web.asynchronous
-    # the generator engine was selected since it has the most cross-platform compatibility
-    #@gen.coroutine
     def on_message(self, message):
         """Receive the input information"""
         message = json.loads(message)
-
+        print("Received %s" %message)
 
         # go through the network changing all of the original functions into overrideable ones
         my_overrides = {}
-        for node in model_container.all_nodes:
+        #ipdb.set_trace()
+        self.simulator_lock.acquire()
+        for node in model_container.model.all_nodes:
             if node.size_in == 0 and node.size_out > 1:
                 override = OverrideFunction(node.output)
                 my_overrides[node] = override
                 node.output = override
-
-
-    def _step(self, simulator):#, callback):
-        """Advances the simulator one step, and then invokes callback(data)."""
-        simulator.step()
-        probes = {}
-        for probe in simulator.model.probes:
-            # Might be able to simplify this code by using NameFinder 
-            if(type(probe.target) == nengo.node.Node and hasattr(probe.target, 'label')):
-                probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.label}
-            elif(type(probe.target) == nengo.ensemble.Neurons and hasattr(probe.target.ensemble, 'label')):
-                probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.ensemble.label}
-            else:
-                probes[id(probe)] = {"data":simulator.data[probe][-1].tolist()}
-
-        data = {
-            't': simulator.n_steps * simulator.model.dt,
-            'probes': probes,
-        }
-        # Return control to the main IOLoop in order to process any other
-        # pending requests, before re-entering the yield point in the coroutine
-        #tornado.ioloop.IOLoop.instance().add_callback(lambda: callback(data))
-        return data
+        self.simulator_lock.release()
 
     def on_close(self):
         """Callback for when the active connection is closed."""

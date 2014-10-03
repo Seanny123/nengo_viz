@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <title>Nengo Editor</title>
-
+<link rel="stylesheet" href="static/css/d3.slider.css">
 <script src="{{ static_url('js/jquery-1.11.0.min.js') }}" type="text/javascript"></script>
 <script src="{{ static_url('js/stream.js') }}" type="text/javascript"></script>
 <script src="{{ static_url('js/d3.min.js') }}"></script>
@@ -40,8 +40,7 @@
 </head>
 <body>
 
-<H1>Hello from streamer</H1>
-<div id="slider8"></div>
+<H1>Slider Test</H1>
 <div id="simulation">
     <div id="time">
     </div>
@@ -99,6 +98,7 @@ var path = svg.append("g")
     .attr("class", "line")
     .attr("d", line);
 
+
 console.log("getting the JSON of the model");
 var xhr = new XMLHttpRequest();
 xhr.open('POST', '/graph.json', true);
@@ -109,16 +109,12 @@ console.log("hurray!`")
 function update_graph(){
     model_json = JSON.parse(this.responseText)
     console.log(JSON.parse(this.responseText))
-
-    console.log("create websocket...")
-    // I really need to figure out a way to not hard-code the socket
-    //var ws = new WebSocket("ws://" + window.location.host + "/simulate?Id=123456789");
-    var ws = new WebSocket("ws://localhost:8080/simulate?Id=123456789");
-    console.log("WebSocket created.")
-    //stream(ws);
-    d3.select('#slider8').call(d3.slider(ws,"solitary_slider").value(50).orientation("vertical"));
-
 }
+
+
+var ws = new WebSocket("ws://localhost:8080/simulate?Id=1234534449");
+d3.select('#time').call(d3.slider("Shoop", ws).value(50).orientation("vertical"));
+stream(ws);
 </script>
 
 </body>

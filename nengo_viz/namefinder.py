@@ -9,22 +9,26 @@ class NameFinder(object):
         self.find_names(net)
 
     def find_names(self, net):
-        """Gets variable names associated to objects. If the object is not assigned to a variable,"""
+        """Gets variable names associated to objects. 
+        If the object is not assigned to a variable, creates new name"""
         net_name = self.known_name[id(net)]
 
         base_lists = ['ensembles', 'nodes', 'connections', 'networks', 'probes']
 
         for k in dir(net):
-            # If it's not a private attribute, a built in function and not a Nengo object
+            # If it's not a private attribute, a built in function 
+            # and not a Nengo object
             if not k.startswith('_') and k not in base_lists:
                 # iterate through the attributes of the network that are a list
                 v = getattr(net, k)
                 if isinstance(v, list):
                     for i, obj in enumerate(v):
-                        # If this object is not already a known name # But then again why would it be?
+                        # If this object is not already a known name
                         if not self.known_name.has_key(id(obj)):
-                            # Make the name, the network, the attribute and the index
-                            # This happens for things like connections and other objects
+                            # Combine the name, the network, the attribute and 
+                            # the index for the new identifier
+                            # This happens for things like connections 
+                            # and other objects
                             n = '%s.%s[%d]' % (net_name, k, i)
                             self.known_name[id(obj)] = n
                 else:

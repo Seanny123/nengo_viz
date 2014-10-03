@@ -28,8 +28,9 @@ class Converter(object):
         self.global_offset = config[model].offset
 
     def process(self, network, id_prefix=None):
-        """Process the network, ensembles, nodes, connections and probes into a dictionary format to be processed by 
-        the client side browser."""
+        """Process the network, ensembles, nodes, connections and probes into 
+        a dictionary format to be processed by 
+        the client side browser for visualization."""
 
         for i, ens in enumerate(network.ensembles):
             line = ens._created_line_number-1
