@@ -122,7 +122,8 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             self.simulator_lock.release()
             probes = dict()
             for probe in simulator.model.probes:
-                # Might be able to simplify this code by using NameFinder? It does seem to be appearing twice? 
+                # Might be able to simplify this code by using NameFinder? It does seem to be appearing twice?
+                # Because the relation between id and label is already in NameFinder, this might not even be necessary
                 if(type(probe.target) == nengo.node.Node and hasattr(probe.target, 'label')):
                     probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.label}
                 elif(type(probe.target) == nengo.ensemble.Neurons and hasattr(probe.target.ensemble, 'label')):

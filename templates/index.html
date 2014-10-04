@@ -50,14 +50,19 @@
 
 <script>
 var n = 40;
-var myData = d3.range(n);
+var myData = d3.range(n); // this is an odd initialization
 var model_json;
 var form_data = new FormData(); //I have no idea what this is used for
 
 var margin = {top: 20, right: 20, bottom: 20, left: 40},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
- 
+
+// TODO: How to set these ranges according to the expected output? How did Javaviz do it?
+
+// Domain is the minimum and maximum values to display on the graph
+// Range is the mount of SVG to cover
+// Get passed into the axes constructors
 var x = d3.scale.linear()
     .domain([0, n - 1])
     .range([0, width]);
@@ -66,10 +71,14 @@ var y = d3.scale.linear()
     .domain([-1, 1])
     .range([height, 0]);
  
+// gets a set of x and y co-ordinates from our data
 var line = d3.svg.line()
-    .x(function(d, i) { return x(i); })
-    .y(function(d, i) { return y(d); });
- 
+    // sets the x value to move forward with time
+    .x(function(data, index) { return x(index); })
+    // sets the y value to just use the data y value
+    .y(function(data, index) { return y(index); });
+
+
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
@@ -81,22 +90,24 @@ svg.append("defs").append("clipPath")
   .append("rect")
     .attr("width", width)
     .attr("height", height);
- 
+
+// code for moving the x axis as it updates
 svg.append("g")
     .attr("class", "x axis")
     .attr("transform", "translate(0," + y(0) + ")")
     .call(d3.svg.axis().scale(x).orient("bottom"));
- 
+
+// define the y axis
 svg.append("g")
     .attr("class", "y axis")
     .call(d3.svg.axis().scale(y).orient("left"));
- 
+
 var path = svg.append("g")
-    .attr("clip-path", "url(#clip)")
+    .attr("clip-path", "url(#clip)") // limit where the line can be drawn
   .append("path")
     .datum(myData)
     .attr("class", "line")
-    .attr("d", line);
+    .attr("d", line); // This is to help draw the sgv path
 
 
 console.log("getting the JSON of the model");
