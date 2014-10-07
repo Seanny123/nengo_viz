@@ -132,11 +132,12 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
                 't': simulator.n_steps * simulator.model.dt,
                 'probes': probes,
             }
-            time.sleep(0.5)
+            #time.sleep(0.5)
             logging.debug('Connection (%d): %s', id(self), data)
             # Write the response out
             response = {"length":len(data), "data":data}
             #print(type(response)) #It's a dict type but it's still not being sent as JSON.
+            #ipdb.set_trace()
             self.write_message(response)
 
     def on_message(self, message):

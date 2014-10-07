@@ -4,8 +4,9 @@ function genChart(selector, probeLabelList, label, probeDispatch){
 
   // The fact that we're copying the data to each chart feels weird.
   var n = 40;
-  var chartData = d3.range(n); //Initialize this better?
+  var chartData = Array.apply(null, Array(40)).map(Number.prototype.valueOf,0);
   var chartInputs = probeLabelList; //Probes to listen to
+  var updateCount = 0;
 
 
   // TODO: How to set these ranges according to the expected output? How did Javaviz do it?
@@ -64,12 +65,12 @@ function genChart(selector, probeLabelList, label, probeDispatch){
       .attr("d", line); // This is to help draw the sgv path
 
   probeDispatch.on(("probeLoad."+label), function(probeData, simTime) {
+    updateCount += 1;
     // Filter until you have only the desired data
+    console.log("dispatch received")
     chartData.shift();
-    $.each(chartInputs, function(input) {
-      if($.inArray(input, probeData) > -1){
-        chartData.push(probeData[input]);
-      }
+    chartInputs.forEach(function(input) {
+        chartData.push(probeData[input].data[0]);
     });
 
     // Then update the path
@@ -79,7 +80,7 @@ function genChart(selector, probeLabelList, label, probeDispatch){
     .transition()
       .duration(1)
       .ease("linear")
-      .attr("transform", "translate(" + x(-1) + ",0)");
+      .attr("transform", "translate(" + xAxisScale(-1) + ",0)");
 
   });
 

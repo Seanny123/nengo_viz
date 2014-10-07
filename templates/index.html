@@ -57,7 +57,8 @@ var nameLog;
 var form_data = new FormData(); //I have no idea what this is used for
 
 var probeDispatch = d3.dispatch("probeLoad");
-genChart("#visualisation", ["pr_s"],"baz", probeDispatch);
+genChart("#visualisation", ["pr_s"], "baz", probeDispatch);
+//genChart("#visualisation", ["pr_s"], "baz", probeDispatch);
 
 console.log("getting the JSON of the model");
 var xhr = new XMLHttpRequest();
