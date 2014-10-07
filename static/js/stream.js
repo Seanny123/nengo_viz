@@ -1,17 +1,17 @@
 // TODO: Figure out where the layout load is going to happen.
 
 function stream(ws) {
-    var dispatch = d3.dispatch("probeLoad");
     ws.onopen = function() {
         console.log("Opening connection...")
     };
     ws.onmessage = function tick(event) {
+        var probeData;
         console.log("Message parsing")
         var d = $.parseJSON(event.data)
         $("#simulation #time").text(d.data.t.toFixed(3));
         $.each(d.data.probes, function(probe, x) {
             probeData.push(x.data); // this needs to handle multiple nodes
-            dispatch.probeLoad(probeData);
+            probeDispatch.probeLoad(probeData);
         });
         console.log("Message is received.");
 

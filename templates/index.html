@@ -7,6 +7,7 @@
 <script src="{{ static_url('js/stream.js') }}" type="text/javascript"></script>
 <script src="{{ static_url('js/d3.min.js') }}" type="text/javascript"></script>
 <script src="{{ static_url('js/d3.slider.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/gen_chart.js') }}" type="text/javascript"></script>
 
 <style type="text/css" media="screen">
     #simulation {
@@ -50,28 +51,30 @@
 <svg id="visualisation" width="1000" height="500"></svg>
 
 <script>
-var myData = d3.range(n); // this is an odd initialization
 var responseJson;
 var modelJson;
 var nameLog;
 var form_data = new FormData(); //I have no idea what this is used for
 
-genChart("#visualisation", ["pr_s"],"baz");
+var probeDispatch = d3.dispatch("probeLoad");
+genChart("#visualisation", ["pr_s"],"baz", probeDispatch);
 
 console.log("getting the JSON of the model");
 var xhr = new XMLHttpRequest();
 xhr.open('POST', '/graph.json', true);
 xhr.onload = update_graph; // this is an asynchronous callback
 xhr.send(form_data); // Why can't I send an empty request?
-console.log("hurray!`");
+console.log("hurray!");
 
 function update_graph(){
+    console.log("receiving JSON");
     responseJson = JSON.parse(this.responseText);
+    // this is going to be used later...
     modelJson = responseJson[0]
     nameLog = responseJson[1]
     console.log(JSON.parse(this.responseText));
+    console.log("done receiving JSON");
 }
-
 
 var ws = new WebSocket("ws://localhost:8080/simulate?Id=1234534449");
 d3.select('#time').call(d3.slider("Shoop", ws).value(50).orientation("vertical"));

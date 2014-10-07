@@ -6,6 +6,7 @@ Usage: python main.py [port=8080]
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
+import tornado.autoreload
 from tornado import gen
 
 import logging
@@ -85,7 +86,8 @@ class ModelContainer(object):
     def get_json(self):
         conv = nengo_viz.converter.Converter(self.model, self.code.splitlines(), self.locals, nengo_viz.config.Config())
         self.namefinder = conv.namefinder
-        return json.dumps([conv.data_dump, conv.namefinder])
+        # Why are we sending the namefinder again?
+        return json.dumps([conv.data_dump(), conv.namefinder.known_name])
 
 # Note that the broadcast function of websockets aren't really used here, since it is assumed that only one browser will want to view the simulation at a time
 class SimulationHandler(tornado.websocket.WebSocketHandler):
@@ -191,4 +193,11 @@ if __name__ == '__main__':
     port = int((sys.argv + [8080])[1])
     application.listen(port)
     webbrowser.open_new_tab('http://localhost:%d/' % port)
+    # For debugging purposes reload Tornado whenever one of the static (Javascript, CSS, HTML) are loaded
+    tornado.autoreload.start()
+    for dir, _, files in os.walk('static'):
+        [tornado.autoreload.watch(dir + '/' + f) for f in files if not f.startswith('.')]
+    for dir, _, files in os.walk('templates'):
+        [tornado.autoreload.watch(dir + '/' + f) for f in files if not f.startswith('.')]
+    # Start this puppy up!
     tornado.ioloop.IOLoop.instance().start()
