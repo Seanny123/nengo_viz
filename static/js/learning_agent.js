@@ -1,6 +1,7 @@
 // Custom chart example
 // Looking specifically at the agent probes, draw our agent moving around the map
 
-function learning_agent(){
-
+function genLearningAgent(){
+  // load the image
+  // move circle from probe update
 }

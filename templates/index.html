@@ -8,6 +8,7 @@
 <script src="{{ static_url('js/d3.min.js') }}" type="text/javascript"></script>
 <script src="{{ static_url('js/d3.slider.js') }}" type="text/javascript"></script>
 <script src="{{ static_url('js/gen_chart.js') }}" type="text/javascript"></script>
+<script src="{{ static_url('js/gen_slider.js') }}" type="text/javascript"></script>
 
 <style type="text/css" media="screen">
     #simulation {
@@ -45,9 +46,8 @@
 <div id="simulation">
     <div id="time">
     </div>
-    <pre id="probes">
-    </pre>
 </div>
+<div id="inputs"></div>
 <div id="visualisation"></div>
 
 <script>
@@ -55,10 +55,15 @@ var responseJson;
 var modelJson;
 var nameLog;
 var form_data = new FormData(); //I have no idea what this is used for
+var inputNodes = {};
 
 var probeDispatch = d3.dispatch("probeLoad");
+
+// Generate the visual outputs you want here
 genChart("#visualisation", ["pr_s"], "foo", probeDispatch);
-genChart("#visualisation", ["pr_e"], "bar", probeDispatch);
+// genChart("#visualisation", ["pr_e"], "bar", probeDispatch);
+
+var ws = new WebSocket("ws://localhost:8080/simulate?Id=1234534449");
 
 console.log("getting the JSON of the model");
 var xhr = new XMLHttpRequest();
@@ -71,14 +76,19 @@ function update_graph(){
     console.log("receiving JSON");
     responseJson = JSON.parse(this.responseText);
     // this is going to be used later...
-    modelJson = responseJson[0]
-    nameLog = responseJson[1]
+    modelJson = responseJson[0];
+    nameLog = responseJson[1];
     console.log(JSON.parse(this.responseText));
     console.log("done receiving JSON");
+    modelJson.nodes.forEach(function(nde){
+        console.log("node");
+        if(nde['is_input'] === true){
+            inputNodes[nde['label']] = nde;
+        }
+    });
+    // Generate your inputs here
+    genSlider("#inputs", inputNodes["Shoop"]['id'], "Shoop");
 }
-
-var ws = new WebSocket("ws://localhost:8080/simulate?Id=1234534449");
-d3.select('#time').call(d3.slider("Shoop", ws).value(50).orientation("vertical"));
 stream(ws);
 </script>
 

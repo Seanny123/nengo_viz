@@ -71,6 +71,9 @@ class ModelContainer(object):
         self.locals = None
         self.code = None
         self.namefinder = None
+        self.conv = None
+        self.overrides = dict()
+        self.name_input_map = dict()
 
     def gen_model(self, code, filename='error_msgs.txt'):
         print("Making the model")
@@ -82,12 +85,23 @@ class ModelContainer(object):
 
         self.model = locals['model']
         self.locals = locals
+        self.conv = nengo_viz.converter.Converter(self.model, self.code.splitlines(), self.locals, nengo_viz.config.Config())
+        self.namefinder = self.conv.namefinder
+        
+        # Make all the input nodes overrideable
+        #ipdb.set_trace()
+        for node in self.model.all_nodes:
+            if node.size_in == 0 and node.size_out >= 1:
+                print("Overriding!")
+                override = OverrideFunction(node.output)
+                self.overrides[node] = override
+                #ipdb.set_trace()
+                self.name_input_map[self.namefinder.known_name[id(node)]] = node
+                node.output = override
 
     def get_json(self):
-        conv = nengo_viz.converter.Converter(self.model, self.code.splitlines(), self.locals, nengo_viz.config.Config())
-        self.namefinder = conv.namefinder
-        # Why are we sending the namefinder again?
-        return json.dumps([conv.data_dump(), conv.namefinder.known_name])
+        # Why are we sending the known_name dict again?
+        return json.dumps([self.conv.data_dump(), self.conv.namefinder.known_name])
 
 # Note that the broadcast function of websockets aren't really used here, since it is assumed that only one browser will want to view the simulation at a time
 class SimulationHandler(tornado.websocket.WebSocketHandler):
@@ -121,6 +135,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
     def _run_simulator(self, simulator):
         """Advances the simulator one step, and then invokes callback(data)."""
         while not self._is_closed:
+            #ipdb.set_trace()
             self.simulator_lock.acquire()
             simulator.step()
             self.simulator_lock.release()
@@ -132,8 +147,8 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
                 't': simulator.n_steps * simulator.model.dt,
                 'probes': probes,
             }
-            #time.sleep(0.5)
-            logging.debug('Connection (%d): %s', id(self), data)
+            time.sleep(0.1) # slow it down for debugging
+            #logging.debug('Connection (%d): %s', id(self), data)
             # Write the response out
             response = {"length":len(data), "data":data}
             #print(type(response)) #It's a dict type but it's still not being sent as JSON.
@@ -149,11 +164,9 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         my_overrides = {}
         #ipdb.set_trace()
         self.simulator_lock.acquire()
-        for node in model_container.model.all_nodes:
-            if node.size_in == 0 and node.size_out > 1:
-                override = OverrideFunction(node.output)
-                my_overrides[node] = override
-                node.output = override
+        # look up the node name in the input dict and assign it the value #TODO: test for two-dimensional values
+        #ipdb.set_trace()
+        model_container.overrides[model_container.name_input_map[message['name']]].set_value(message['val'])
         self.simulator_lock.release()
 
     def on_close(self):

@@ -1,0 +1,2 @@
+tornado
+-e git://github.com/ctn-waterloo/nengo-temp.git#egg=nengo
