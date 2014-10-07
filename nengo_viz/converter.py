@@ -89,9 +89,9 @@ class Converter(object):
             elif(type(probe.target) == nengo.ensemble.Neurons and hasattr(probe.target.ensemble, 'label')):
                 label = probe.target.ensemble.label
 
-            obj = {'label':label, 'line':line, 'id':nde_id, 'type':'probe',
+            obj = {'label':label, 'line':line, 'id':probe_id, 'type':'probe',
                    'x':pos[0], 'y':pos[1],  'scale': scale,
-                   'contained_by': self.object_index[network], "is_input": is_input}
+                   'contained_by': self.object_index[network]}
 
             self.object_index[probe] = len(self.objects)
             self.objects.append(obj)
@@ -165,3 +165,8 @@ class Converter(object):
                     global_offset=self.global_offset)
         pprint.pprint(data)
         return json.dumps(data)
+
+    def data_dump(self):
+        return dict(nodes=self.objects, links=self.links,
+                    global_scale=self.global_scale,
+                    global_offset=self.global_offset)

@@ -23,4 +23,4 @@ with model:
     pr_s = nengo.Probe(sin_node)  # The original input
     #nengo.Probe(neurons, 'voltage')  # The original input
     #nengo.Probe(neurons, 'spikes')  # The raw spikes from the neuron
-    pr_e = nengo.Probe(neurons, synapse=0.01)  # The raw spikes from the neuron
+    pr_e = nengo.Probe(neurons.neurons, synapse=0.01)  # The raw spikes from the neuron

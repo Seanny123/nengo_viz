@@ -69,6 +69,7 @@ class ModelContainer(object):
         self.model = None
         self.locals = None
         self.code = None
+        self.namefinder = None
 
     def gen_model(self, code, filename='error_msgs.txt'):
         print("Making the model")
@@ -83,7 +84,8 @@ class ModelContainer(object):
 
     def get_json(self):
         conv = nengo_viz.converter.Converter(self.model, self.code.splitlines(), self.locals, nengo_viz.config.Config())
-        return conv.to_json()
+        self.namefinder = conv.namefinder
+        return json.dumps([conv.data_dump, conv.namefinder])
 
 # Note that the broadcast function of websockets aren't really used here, since it is assumed that only one browser will want to view the simulation at a time
 class SimulationHandler(tornado.websocket.WebSocketHandler):
@@ -122,14 +124,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             self.simulator_lock.release()
             probes = dict()
             for probe in simulator.model.probes:
-                # Might be able to simplify this code by using NameFinder? It does seem to be appearing twice?
-                # Because the relation between id and label is already in NameFinder, this might not even be necessary
-                if(type(probe.target) == nengo.node.Node and hasattr(probe.target, 'label')):
-                    probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.label}
-                elif(type(probe.target) == nengo.ensemble.Neurons and hasattr(probe.target.ensemble, 'label')):
-                    probes[id(probe)] = {"data":simulator.data[probe][-1].tolist(), "label":probe.target.ensemble.label}
-                else:
-                    probes[id(probe)] = {"data":simulator.data[probe][-1].tolist()}
+                probes[model_container.namefinder.name(probe)] = {"data":simulator.data[probe][-1].tolist()}
 
             data = {
                 't': simulator.n_steps * simulator.model.dt,
