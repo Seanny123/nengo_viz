@@ -3,7 +3,7 @@
 function genChart(selector, probeLabelList, label, probeDispatch){
 
   // The fact that we're copying the data to each chart feels weird.
-  var n = 40;
+  var n = 100;
   var chartData = Array.apply(null, Array(40)).map(Number.prototype.valueOf,0);
   var chartInputs = probeLabelList; //Probes to listen to
   var updateCount = 0;
@@ -23,7 +23,7 @@ function genChart(selector, probeLabelList, label, probeDispatch){
       .range([0, width]);
    
   var yAxisScale = d3.scale.linear()
-      .domain([-1, 1])
+      .domain([-30, 30])
       .range([height, 0]);
    
   // gets a set of x and y co-ordinates from our data

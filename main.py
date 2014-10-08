@@ -55,7 +55,7 @@ class MainHandler(tornado.web.RequestHandler):
     """Request handler for the main landing page."""
     @tornado.web.asynchronous
     def get(self):
-        code = open("my_model.py","r").read()
+        code = open("my_mult.py","r").read()
         model_container.gen_model(code)
         self.render('index.html')
 
@@ -136,9 +136,9 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         """Advances the simulator one step, and then invokes callback(data)."""
         while not self._is_closed:
             #ipdb.set_trace()
-            self.simulator_lock.acquire()
+            #self.simulator_lock.acquire()
             simulator.step()
-            self.simulator_lock.release()
+            #self.simulator_lock.release()
             probes = dict()
             for probe in simulator.model.probes:
                 probes[model_container.namefinder.name(probe)] = {"data":simulator.data[probe][-1].tolist()}
@@ -147,7 +147,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
                 't': simulator.n_steps * simulator.model.dt,
                 'probes': probes,
             }
-            time.sleep(0.1) # slow it down for debugging
+            #time.sleep(0.1) # slow it down for debugging
             #logging.debug('Connection (%d): %s', id(self), data)
             # Write the response out
             response = {"length":len(data), "data":data}
@@ -163,11 +163,11 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         # go through the network changing all of the original functions into overrideable ones
         my_overrides = {}
         #ipdb.set_trace()
-        self.simulator_lock.acquire()
+        #self.simulator_lock.acquire()
         # look up the node name in the input dict and assign it the value #TODO: test for two-dimensional values
         #ipdb.set_trace()
         model_container.overrides[model_container.name_input_map[message['name']]].set_value(message['val'])
-        self.simulator_lock.release()
+        #self.simulator_lock.release()
 
     def on_close(self):
         """Callback for when the active connection is closed."""

@@ -42,12 +42,15 @@
 </head>
 <body>
 
-<H1>Slider Test</H1>
+
 <div id="simulation">
     <div id="time">
     </div>
 </div>
-<div id="inputs"></div>
+<H1>Multiplication Test</H1>
+<div id="input1"></div>
+<p>
+<div id="input2"></div>
 <div id="visualisation"></div>
 
 <script>
@@ -60,7 +63,7 @@ var inputNodes = {};
 var probeDispatch = d3.dispatch("probeLoad");
 
 // Generate the visual outputs you want here
-genChart("#visualisation", ["pr_s"], "foo", probeDispatch);
+genChart("#visualisation", ["prod_probe"], "foo", probeDispatch);
 // genChart("#visualisation", ["pr_e"], "bar", probeDispatch);
 
 var ws = new WebSocket("ws://localhost:8080/simulate?Id=1234534449");
@@ -87,7 +90,8 @@ function update_graph(){
         }
     });
     // Generate your inputs here
-    genSlider("#inputs", inputNodes["Shoop"]['id'], "Shoop");
+    genSlider("#input1", inputNodes["inputA"]['id'], "inputA");
+    genSlider("#input2", inputNodes["inputB"]['id'], "inputB");
 }
 stream(ws);
 </script>

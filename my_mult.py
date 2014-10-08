@@ -3,10 +3,10 @@ import nengo
 model = nengo.Network(label='Multiplication')
 with model:
     # Create 4 ensembles of leaky integrate-and-fire neurons
-    A = nengo.Ensemble(100, dimensions=1, radius=10)
-    B = nengo.Ensemble(100, dimensions=1, radius=10)
-    combined = nengo.Ensemble(224, dimensions=2, radius=15) # This radius is ~sqrt(10^2+10^2)
-    prod = nengo.Ensemble(100, dimensions=1, radius=20)
+    A = nengo.Ensemble(100, dimensions=1, radius=10, label="A")
+    B = nengo.Ensemble(100, dimensions=1, radius=10, label="B")
+    combined = nengo.Ensemble(224, dimensions=2, radius=15, label="combined") # This radius is ~sqrt(10^2+10^2)
+    prod = nengo.Ensemble(100, dimensions=1, radius=20, label="prod")
 
 # This next two lines make all of the encoders in the Combined population point at the 
 # corners of the cube. This improves the quality of the computation.
@@ -18,8 +18,8 @@ combined.encoders = np.tile([[1,1],[-1,1],[1,-1],[-1,-1]], (combined.n_neurons /
 from nengo.utils.functions import piecewise
 with model:
     # Create a piecewise step function for input
-    inputA = nengo.Node(piecewise({0: 0, 2.5: 10, 4: -10}))
-    inputB = nengo.Node(piecewise({0: 10, 1.5: 2, 3: 0, 4.5: 2}))
+    inputA = nengo.Node(piecewise({0: 0, 2.5: 10, 4: -10}), label="inputA")
+    inputB = nengo.Node(piecewise({0: 10, 1.5: 2, 3: 0, 4.5: 2}), label="inputB")
     
     correct_ans = piecewise({0: 0, 1.5: 0, 2.5: 20, 3: 0, 4: 0, 4.5: -20})
 
