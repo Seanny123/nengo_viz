@@ -1,5 +1,3 @@
-// TODO: Figure out where the layout load is going to happen.
-
 function stream(ws) {
     ws.onopen = function() {
         console.log("Opening connection...")
@@ -13,9 +11,6 @@ function stream(ws) {
         probeDispatch.probeLoad(d.data.probes, d.data.t);
         console.log("Message is received.");
 
-        // Does D3 dispatch wait for all the listeners to call back before continuing? I guess we'll have to try it out to know for sure!
-
-        // TODO: Send the sliders that need to be passed
         // TODO: Make time control
     };
     ws.onclose = function() { 
