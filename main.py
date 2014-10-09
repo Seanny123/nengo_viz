@@ -18,9 +18,8 @@ import webbrowser
 import re
 import keyword
 import time
-import thread
 import multiprocessing
-import multiprocessing.managers
+import multiprocessing
 
 import nengo_helper
 
@@ -110,11 +109,11 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
 
     def __init__(self, *args, **kwargs):
         super(SimulationHandler, self).__init__(*args, **kwargs)
+        self.sim_process = None
         self.clients = dict()
-        self.message_count = 0
-        #self.manager = multiprocessing.managers.BaseManager()
-        #self.manager.register("nengo.Simulator", nengo.Simulator, exposed=["probes"])
-        #self.manager.register("ModelContainer", nengo.Simulator, exposed=["get_overrides"])
+        self.node_manager = multiprocessing.Manager()
+        self.node_lock = multiprocessing.Lock()
+        self.node_vals = self.node_manager.dict()
 
     def open(self, *args):
         """Callback for when the connection is opened."""
@@ -127,18 +126,24 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
 
         # Build the model and simulator
         # Maintain an active connection, blocking only during each step # This is going to open a new simulation for every new connection. Is that the behaviour we want? # I think we might need to use multithreading here # Goddamn producer consumer problem
-        #simulator = nengo.Simulator(model_container.model, dt)
-        #sim_thread = threading.Thread(target=self._run_simulator, args=(simulator,))
-        #sim_thread.daemon = True #So that I can terminate the program easily
-        #sim_thread.start()
+        simulator = nengo.Simulator(model_container.model, dt)
+        self.sim_process = multiprocessing.Process(target=self._run_simulator, args=(simulator,))
+        self.sim_process.start()
 
 
     def _run_simulator(self, simulator):
-        """Advances the simulator one step, and then invokes callback(data)."""
-        while not self._is_closed:
-            #self.simulator_lock.acquire()
+        """Advances the simulator one step"""
+        while not self._is_closed:      self.node_manager = multiprocessing.Manager()
+        self.node_lock = multiprocessing.Lock()
+        self.node_vals = self.node_manager.dict()
+            if(self.node_vals.items != []):
+                self.node_lock.acquire()
+                # go through the network changing all of the original functions into overrideable ones
+                for key, value in self.node_vals:
+                    model_container.overrides[key].set_value(self.node_vals.pop(key))
+                self.node_lock.release()
+            
             simulator.step()
-            #self.simulator_lock.release()
             probes = dict()
             for probe in simulator.model.probes:
                 probes[model_container.namefinder.name(probe)] = {"data":simulator.data[probe][-1].tolist()}
@@ -154,19 +159,14 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             #print(type(response)) #It's a dict type but it's still not being sent as JSON.
             print("Sending message %i" %self.message_count)
             self.write_message(response)
-            self.message_count += 1
 
     def on_message(self, message):
         """Receive the input information"""
         message = json.loads(message)
         print("Received %s" %message)
-
-        # go through the network changing all of the original functions into overrideable ones
-        my_overrides = {}
-        #self.simulator_lock.acquire()
-        # look up the node name in the input dict and assign it the value #TODO: test for two-dimensional values
-        model_container.overrides[model_container.name_input_map[message['name']]].set_value(message['val'])
-        #self.simulator_lock.release()
+        self.node_lock.acquire()
+        self.node_vals[model_container.name_input_map[message['name']]] = message['val']
+        self.node_lock.release()
 
     def on_close(self):
         """Callback for when the active connection is closed."""
@@ -185,7 +185,7 @@ class Application(tornado.web.Application):
 
         super(Application, self).__init__(*args, **kwargs)
 
-
+# WTF. Why is this stuff outside of `if __name__ == '__main__':`
 settings = {
     'static_path': os.path.join(os.path.dirname(__file__), 'static'),
     'template_path': os.path.join(os.path.dirname(__file__), 'templates'),
@@ -200,7 +200,6 @@ application = Application([
 ], **settings)
 
 model_container = ModelContainer()
-
 
 if __name__ == '__main__':
     port = int((sys.argv + [8080])[1])
