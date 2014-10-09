@@ -19,7 +19,8 @@ import re
 import keyword
 import time
 import thread
-import threading
+import multiprocessing
+import multiprocessing.managers
 
 import nengo_helper
 
@@ -41,9 +42,7 @@ class OverrideFunction:
     def __init__(self, original_function):
         self.original_function = original_function
         self.override_value = None
-    # Not really used, since we create a new override function every time to change an input
-    # Maybe we _should_ be using this?
-    def set_value(self, value):    # override the value
+    def set_value(self, value):
         self.override_value = value
     def __call__(self, t):
         if self.override_value is None:
@@ -89,13 +88,11 @@ class ModelContainer(object):
         self.namefinder = self.conv.namefinder
         
         # Make all the input nodes overrideable
-        #ipdb.set_trace()
         for node in self.model.all_nodes:
             if node.size_in == 0 and node.size_out >= 1:
-                print("Overriding!")
+                #print("Overriding!")
                 override = OverrideFunction(node.output)
                 self.overrides[node] = override
-                #ipdb.set_trace()
                 self.name_input_map[self.namefinder.known_name[id(node)]] = node
                 node.output = override
 
@@ -103,39 +100,42 @@ class ModelContainer(object):
         # Why are we sending the known_name dict again?
         return json.dumps([self.conv.data_dump(), self.conv.namefinder.known_name])
 
+    def get_overrides(self):
+        "Accessor for multiprocessing purposes, not sure if necessary"
+        return self.overrides
+
 # Note that the broadcast function of websockets aren't really used here, since it is assumed that only one browser will want to view the simulation at a time
 class SimulationHandler(tornado.websocket.WebSocketHandler):
     """Request handler for streaming simulation data."""
 
     def __init__(self, *args, **kwargs):
-        print("Hello from SimulationHandler")
         super(SimulationHandler, self).__init__(*args, **kwargs)
         self.clients = dict()
-        self.simulator_lock = threading.Lock()
+        self.message_count = 0
+        #self.manager = multiprocessing.managers.BaseManager()
+        #self.manager.register("nengo.Simulator", nengo.Simulator, exposed=["probes"])
+        #self.manager.register("ModelContainer", nengo.Simulator, exposed=["get_overrides"])
 
     def open(self, *args):
         """Callback for when the connection is opened."""
-        print("Connection opened")
         self.id = self.get_argument("Id")
         self.stream.set_nodelay(True)
         #self.clients[self.id] = {"id": self.id, "object": self} # Not necessary?
         self._is_closed = False
 
-        print("Message time")
         dt = 0.001
 
         # Build the model and simulator
         # Maintain an active connection, blocking only during each step # This is going to open a new simulation for every new connection. Is that the behaviour we want? # I think we might need to use multithreading here # Goddamn producer consumer problem
-        simulator = nengo.Simulator(model_container.model, dt)
-        sim_thread = threading.Thread(target=self._run_simulator, args=(simulator,))
-        sim_thread.daemon = True #So that I can terminate the program easily
-        sim_thread.start()
+        #simulator = nengo.Simulator(model_container.model, dt)
+        #sim_thread = threading.Thread(target=self._run_simulator, args=(simulator,))
+        #sim_thread.daemon = True #So that I can terminate the program easily
+        #sim_thread.start()
 
 
     def _run_simulator(self, simulator):
         """Advances the simulator one step, and then invokes callback(data)."""
         while not self._is_closed:
-            #ipdb.set_trace()
             #self.simulator_lock.acquire()
             simulator.step()
             #self.simulator_lock.release()
@@ -152,8 +152,9 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             # Write the response out
             response = {"length":len(data), "data":data}
             #print(type(response)) #It's a dict type but it's still not being sent as JSON.
-            #ipdb.set_trace()
+            print("Sending message %i" %self.message_count)
             self.write_message(response)
+            self.message_count += 1
 
     def on_message(self, message):
         """Receive the input information"""
@@ -162,10 +163,8 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
 
         # go through the network changing all of the original functions into overrideable ones
         my_overrides = {}
-        #ipdb.set_trace()
         #self.simulator_lock.acquire()
         # look up the node name in the input dict and assign it the value #TODO: test for two-dimensional values
-        #ipdb.set_trace()
         model_container.overrides[model_container.name_input_map[message['name']]].set_value(message['val'])
         #self.simulator_lock.release()
 

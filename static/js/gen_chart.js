@@ -67,7 +67,6 @@ function genChart(selector, probeLabelList, label, probeDispatch){
   probeDispatch.on(("probeLoad."+label), function(probeData, simTime) {
     updateCount += 1;
     // Filter until you have only the desired data
-    console.log("dispatch received")
     chartData.shift();
     chartInputs.forEach(function(input) {
         chartData.push(probeData[input].data[0]);
