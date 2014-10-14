@@ -12,5 +12,5 @@ log.txt
 .ipynb_checkpoints/
 .cache
 .tox
-.idea
+.idea/
 *.class
