@@ -130,9 +130,9 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         # Build the model and simulator
         # Maintain an active connection, blocking only during each step # This is going to open a new simulation for every new connection. Is that the behaviour we want? # I think we might need to use multithreading here # Goddamn producer consumer problem
         simulator = nengo.Simulator(model_container.model, dt)
-        #self._run_simulator(simulator)
-        #self.sim_process = multiprocessing.Process(target=self._run_simulator, args=(simulator,))
-        #self.sim_process.start()
+        self._run_simulator(simulator)
+        self.sim_process = multiprocessing.Process(target=self._run_simulator, args=(simulator,))
+        self.sim_process.start()
 
 
     def _run_simulator(self, simulator):
