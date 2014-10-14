@@ -33,3 +33,30 @@ with model:
 
 sim = nengo.Simulator(model, 0.001)
 sim.step()
+
+import multiprocessing
+
+class Dog():
+    def __init__(self, name = "joe"):
+        self.name = name
+    def bark(self):
+        print("woof")
+
+mg = multiprocessing.Manager()
+dt = dict()
+lp = mg.list()
+lp.append(dt)
+print(lp)
+dt["a"] = 1
+dt["b"] = 2
+lp[0] = dt
+print(lp)
+dt = dict()
+lab = Dog("carl")
+print(lab)
+pup = Dog("steve")
+print(pup)
+dt[lab] = 1
+dt[pup] = 2
+lp[0] = dt
+print(lp)

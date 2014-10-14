@@ -30,6 +30,7 @@ import nengo_viz.converter
 import ipdb
 
 import sys
+import pydevd
 
 def isidentifier(s):
     if s in keyword.kwlist:
@@ -38,6 +39,7 @@ def isidentifier(s):
 
 # A function that will return the result of the original function, unless it has ben overriden
 class OverrideFunction:
+
     def __init__(self, original_function):
         self.original_function = original_function
         self.override_value = None
@@ -49,7 +51,7 @@ class OverrideFunction:
         else:
             return self.override_value
 
-class MainHandler(tornado.web.RequestHandler):
+class  MainHandler(tornado.web.RequestHandler):
     """Request handler for the main landing page."""
     @tornado.web.asynchronous
     def get(self):
@@ -57,12 +59,12 @@ class MainHandler(tornado.web.RequestHandler):
         model_container.gen_model(code)
         self.render('index.html')
 
-class ModelHandler(tornado.web.RequestHandler):
+class  ModelHandler(tornado.web.RequestHandler):
     """Giving the JSON"""
     def post(self):
         self.write(model_container.get_json())
 
-class ModelContainer(object):
+class  ModelContainer(object):
 
     def __init__(self):
         self.model = None
@@ -114,6 +116,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         self.node_manager = multiprocessing.Manager()
         self.node_lock = multiprocessing.Lock()
         self.node_vals = self.node_manager.dict()
+        self.message_count = 0
 
     def open(self, *args):
         """Callback for when the connection is opened."""
@@ -127,22 +130,26 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         # Build the model and simulator
         # Maintain an active connection, blocking only during each step # This is going to open a new simulation for every new connection. Is that the behaviour we want? # I think we might need to use multithreading here # Goddamn producer consumer problem
         simulator = nengo.Simulator(model_container.model, dt)
-        self.sim_process = multiprocessing.Process(target=self._run_simulator, args=(simulator,))
-        self.sim_process.start()
+        #self._run_simulator(simulator)
+        #self.sim_process = multiprocessing.Process(target=self._run_simulator, args=(simulator,))
+        #self.sim_process.start()
 
 
     def _run_simulator(self, simulator):
         """Advances the simulator one step"""
-        while not self._is_closed:      self.node_manager = multiprocessing.Manager()
-        self.node_lock = multiprocessing.Lock()
-        self.node_vals = self.node_manager.dict()
-            if(self.node_vals.items != []):
+        while not self._is_closed:
+            if(self.node_vals.items() != []):
                 self.node_lock.acquire()
                 # go through the network changing all of the original functions into overrideable ones
-                for key, value in self.node_vals:
-                    model_container.overrides[key].set_value(self.node_vals.pop(key))
+                for node_name, value in self.node_vals.items():
+                    #pydevd.settrace('127.0.0.1', port=21000, suspend=True)
+                    # Am I dealing with a copy of the simulator and the overrides? Does it matter? As long as the name association is maintained?
+                    model_container.overrides[model_container.name_input_map[node_name]].set_value(self.node_vals.pop(node_name))
                 self.node_lock.release()
-            
+            else:
+                time.sleep(0.5)
+                print(self.node_vals.items())
+
             simulator.step()
             probes = dict()
             for probe in simulator.model.probes:
@@ -157,7 +164,6 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             # Write the response out
             response = {"length":len(data), "data":data}
             #print(type(response)) #It's a dict type but it's still not being sent as JSON.
-            print("Sending message %i" %self.message_count)
             self.write_message(response)
 
     def on_message(self, message):
@@ -165,7 +171,13 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         message = json.loads(message)
         print("Received %s" %message)
         self.node_lock.acquire()
-        self.node_vals[model_container.name_input_map[message['name']]] = message['val']
+        if(self.message_count >= 3):
+            ipdb.set_trace()
+        print("Hash %s" %model_container.name_input_map)
+        print("key result: %s" %model_container.name_input_map[message['name']])
+        self.node_vals[message['name']] = message['val']
+        print("Result %s" %self.node_vals.items())
+        self.message_count += 1
         self.node_lock.release()
 
     def on_close(self):
@@ -189,7 +201,7 @@ class Application(tornado.web.Application):
 settings = {
     'static_path': os.path.join(os.path.dirname(__file__), 'static'),
     'template_path': os.path.join(os.path.dirname(__file__), 'templates'),
-    'debug': True,
+    'debug': False,
 }
 
 # I want to rename graph.json to something that better describes what it's sending to the front end
