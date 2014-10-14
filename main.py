@@ -144,14 +144,14 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
                 for node_name, value in self.node_vals.items():
                     #pydevd.settrace('127.0.0.1', port=21000, suspend=True)
                     # Am I dealing with a copy of the simulator and the overrides? Does it matter? As long as the name association is maintained?
-                    print("overriding %s" %model_container.name_input_map[node_name])
+                    #print("overriding %s" %model_container.name_input_map[node_name])
                     new_node_val = self.node_vals.pop(node_name)
-                    print("new_node_val={%s}" %new_node_val)
+                    #print("new_node_val={%s}" %new_node_val)
                     model_container.overrides[model_container.name_input_map[node_name]].set_value(new_node_val)
                 self.node_lock.release()
-            else:
-                time.sleep(0.5)
-                print(self.node_vals.items())
+            #else:
+                #time.sleep(0.5)
+                #print(self.node_vals.items())
 
             simulator.step()
             probes = dict()
@@ -172,7 +172,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
     def on_message(self, message):
         """Receive the input information"""
         message = json.loads(message)
-        print("Received %s" %message)
+        #print("Received %s" %message)
         self.node_lock.acquire()
         #if(self.message_count >= 3):
         #    ipdb.set_trace()
