@@ -176,8 +176,8 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         self.node_lock.acquire()
         #if(self.message_count >= 3):
         #    ipdb.set_trace()
-        print("Hash %s" %model_container.name_input_map)
-        print("key result: %s" %model_container.name_input_map[message['name']])
+        #print("Hash %s" %model_container.name_input_map)
+        #print("key result: %s" %model_container.name_input_map[message['name']])
         self.node_vals[message['name']] = message['val']
         print("Result %s" %self.node_vals.items())
         self.message_count += 1
