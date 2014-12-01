@@ -11,6 +11,7 @@ function stream(ws) {
         probeDispatch.probeLoad(d.data.probes, d.data.t);
         console.log("Message is received.");
         message_count += 1;
+        
         // TODO: Make time control
     };
     ws.onclose = function() { 

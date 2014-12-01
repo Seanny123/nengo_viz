@@ -66,7 +66,7 @@ var probeDispatch = d3.dispatch("probeLoad");
 
 // Generate the visual outputs you want here
 genChart("#visualisation", ["prod_probe"], "foo", probeDispatch);
-genChart("#visualisation", ["A_probe"], "bar", probeDispatch);
+genChart("#visualisation", ["inputA_probe"], "bar", probeDispatch);
 // genChart("#visualisation", ["pr_e"], "bar", probeDispatch);
 
 var ws = new WebSocket("ws://localhost:8080/simulate?Id=1234534449");

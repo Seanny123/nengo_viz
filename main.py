@@ -146,7 +146,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
                     # Am I dealing with a copy of the simulator and the overrides? Does it matter? As long as the name association is maintained?
                     #print("overriding %s" %model_container.name_input_map[node_name])
                     new_node_val = self.node_vals.pop(node_name)
-                    #print("new_node_val={%s}" %new_node_val)
+                    print("new_node_val={%s}" %new_node_val)
                     model_container.overrides[model_container.name_input_map[node_name]].set_value(new_node_val)
                 self.node_lock.release()
             #else:
@@ -167,7 +167,10 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             # Write the response out
             response = {"length":len(data), "data":data}
             #print(type(response)) #It's a dict type but it's still not being sent as JSON.
+            print(data['probes']['inputA_probe']['data'])
+            #sys.stderr.write(".")
             self.write_message(response)
+            #sys.stderr.write("-")
 
     def on_message(self, message):
         """Receive the input information"""
