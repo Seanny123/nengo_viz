@@ -13,4 +13,5 @@ log.txt
 .cache
 .tox
 .idea/
+.idea
 *.class
