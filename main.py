@@ -9,6 +9,8 @@ import tornado.websocket
 import tornado.autoreload
 from tornado import gen
 
+import numpy as np
+
 import logging
 import json
 import os.path
@@ -30,7 +32,7 @@ import nengo_viz.converter
 import ipdb
 
 import sys
-import pydevd
+#import pydevd
 
 def isidentifier(s):
     if s in keyword.kwlist:
@@ -128,7 +130,6 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         dt = 0.001
 
         # Build the model and simulator
-        # Maintain an active connection, blocking only during each step # This is going to open a new simulation for every new connection. Is that the behaviour we want? # I think we might need to use multithreading here # Goddamn producer consumer problem
         simulator = nengo.Simulator(model_container.model, dt)
         #self._run_simulator(simulator)
         self.sim_process = multiprocessing.Process(target=self._run_simulator, args=(simulator,))
@@ -137,6 +138,10 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
 
     def _run_simulator(self, simulator):
         """Advances the simulator one step"""
+        #message_log = open("message_log.txt","w")
+        #sim_done_log = open("sim_done_log.txt", "w")
+        #sim_start_log = open("sim_start_log.txt", "w")
+        #sent_log = open("time_log.txt", "w")
         while not self._is_closed:
             if(self.node_vals.items() != []):
                 self.node_lock.acquire()
@@ -153,10 +158,15 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
                 #time.sleep(0.5)
                 #print(self.node_vals.items())
 
+            #sim_start_log.write(str(time.time()))
+            #sim_start_log.write("\n")
+
             simulator.step()
             probes = dict()
             for probe in simulator.model.probes:
                 probes[model_container.namefinder.name(probe)] = {"data":simulator.data[probe][-1].tolist()}
+                # This should probably be optimized somehow. np.delete might be faster? maybe this shouldn't be done at every iteration?
+                #del simulator._probe_outputs[probe][:]
 
             data = {
                 't': simulator.n_steps * simulator.model.dt,
@@ -167,9 +177,17 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
             # Write the response out
             response = {"length":len(data), "data":data}
             #print(type(response)) #It's a dict type but it's still not being sent as JSON.
-            print(data['probes']['inputA_probe']['data'])
+            #print(data['probes']['inputA_probe']['data'])
             #sys.stderr.write(".")
+            #message_log.write(str(response))
+            #message_log.write("\n")
+            #sim_done_log.write(str(time.time()))
+            #sim_done_log.write("\n")
             self.write_message(response)
+            # And then we'll figure out how to write the difference between the times
+            # If this doesn't show an increasing amount of time, then we'll look at the web browser
+            #sent_log.write(str(time.time()))
+            #sent_log.write("\n")
             #sys.stderr.write("-")
 
     def on_message(self, message):
@@ -220,7 +238,7 @@ application = Application([
 model_container = ModelContainer()
 
 if __name__ == '__main__':
-    port = int((sys.argv + [8080])[1])
+    port = int((sys.argv + [8082])[1])
     application.listen(port)
     webbrowser.open_new_tab('http://localhost:%d/' % port)
     # For debugging purposes reload Tornado whenever one of the static (Javascript, CSS, HTML) are loaded

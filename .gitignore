@@ -15,3 +15,5 @@ log.txt
 .idea/
 .idea
 *.class
+tmp.py
+message_log.txt

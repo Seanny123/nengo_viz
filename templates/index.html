@@ -69,7 +69,7 @@ genChart("#visualisation", ["prod_probe"], "foo", probeDispatch);
 genChart("#visualisation", ["inputA_probe"], "bar", probeDispatch);
 // genChart("#visualisation", ["pr_e"], "bar", probeDispatch);
 
-var ws = new WebSocket("ws://localhost:8080/simulate?Id=1234534449");
+var ws = new WebSocket("ws://localhost:8082/simulate?Id=1234534449");
 
 console.log("getting the JSON of the model");
 var xhr = new XMLHttpRequest();
