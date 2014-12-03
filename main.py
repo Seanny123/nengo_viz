@@ -21,7 +21,7 @@ import re
 import keyword
 import time
 import multiprocessing
-import multiprocessing
+import datetime
 
 import nengo_helper
 
@@ -34,10 +34,11 @@ import ipdb
 import sys
 #import pydevd
 
-def isidentifier(s):
-    if s in keyword.kwlist:
-        return False
-    return re.match(r'^[a-z_][a-z0-9_]*$', s, re.I) is not None
+def get_milliseconds_diff(start, end):
+    return (
+            ((start.days - end.days) * 24 * 60 * 60 + (start.seconds - end.seconds)) * 1000
+            + (start.microseconds - end.microseconds) / 1000.0
+           )
 
 # A function that will return the result of the original function, unless it has ben overriden
 class OverrideFunction:
@@ -119,6 +120,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         self.node_lock = multiprocessing.Lock()
         self.node_vals = self.node_manager.dict()
         self.message_count = 0
+        self.time_gap = 100 # amount in milliseconds to wait between messages
 
     def open(self, *args):
         """Callback for when the connection is opened."""
@@ -138,67 +140,46 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
 
     def _run_simulator(self, simulator):
         """Advances the simulator one step"""
-        #message_log = open("message_log.txt","w")
-        #sim_done_log = open("sim_done_log.txt", "w")
-        #sim_start_log = open("sim_start_log.txt", "w")
-        #sent_log = open("time_log.txt", "w")
+        last_message_time = 0
         while not self._is_closed:
             if(self.node_vals.items() != []):
                 self.node_lock.acquire()
                 # go through the network changing all of the original functions into overrideable ones
                 for node_name, value in self.node_vals.items():
-                    #pydevd.settrace('127.0.0.1', port=21000, suspend=True)
                     # Am I dealing with a copy of the simulator and the overrides? Does it matter? As long as the name association is maintained?
                     #print("overriding %s" %model_container.name_input_map[node_name])
                     new_node_val = self.node_vals.pop(node_name)
                     print("new_node_val={%s}" %new_node_val)
                     model_container.overrides[model_container.name_input_map[node_name]].set_value(new_node_val)
                 self.node_lock.release()
-            #else:
-                #time.sleep(0.5)
-                #print(self.node_vals.items())
-
-            #sim_start_log.write(str(time.time()))
-            #sim_start_log.write("\n")
 
             simulator.step()
             probes = dict()
             for probe in simulator.model.probes:
                 probes[model_container.namefinder.name(probe)] = {"data":simulator.data[probe][-1].tolist()}
-                # This should probably be optimized somehow. np.delete might be faster? maybe this shouldn't be done at every iteration?
-                #del simulator._probe_outputs[probe][:]
+                # Because the probe dictionary of a simulator needs to be created every time it's called
+                # and because probes accumulate data over time we have to delete the data that's been accumulated so far
+                # or else the simple look-up on the previous line starts to take forever
+                del simulator._probe_outputs[probe][:]
 
             data = {
                 't': simulator.n_steps * simulator.model.dt,
                 'probes': probes,
             }
-            #time.sleep(0.1) # slow it down for debugging
-            #logging.debug('Connection (%d): %s', id(self), data)
             # Write the response out
+
             response = {"length":len(data), "data":data}
-            #print(type(response)) #It's a dict type but it's still not being sent as JSON.
-            #print(data['probes']['inputA_probe']['data'])
-            #sys.stderr.write(".")
-            #message_log.write(str(response))
-            #message_log.write("\n")
-            #sim_done_log.write(str(time.time()))
-            #sim_done_log.write("\n")
+            # if the simulation is running too fast, tell it to sleep for a bit to let D3 catch up
+            time_diff = get_milliseconds_diff(last_message_time, datetime.datetime.now())
+            if(time_diff < self.time_gap):
+                time.sleep((self.time_gap - time_diff)/1000)
             self.write_message(response)
-            # And then we'll figure out how to write the difference between the times
-            # If this doesn't show an increasing amount of time, then we'll look at the web browser
-            #sent_log.write(str(time.time()))
-            #sent_log.write("\n")
-            #sys.stderr.write("-")
+            last_message_time = datetime.datetime.now()
 
     def on_message(self, message):
         """Receive the input information"""
         message = json.loads(message)
-        #print("Received %s" %message)
         self.node_lock.acquire()
-        #if(self.message_count >= 3):
-        #    ipdb.set_trace()
-        #print("Hash %s" %model_container.name_input_map)
-        #print("key result: %s" %model_container.name_input_map[message['name']])
         self.node_vals[message['name']] = message['val']
         print("Result %s" %self.node_vals.items())
         self.message_count += 1
