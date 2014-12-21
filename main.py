@@ -69,7 +69,7 @@ class  ModelHandler(tornado.web.RequestHandler):
         self.write(model_container.get_json())
 
 class  ModelContainer(object):
-
+    """an object to organize the model and it's manipulations"""
     def __init__(self):
         self.model = None
         self.locals = None
@@ -117,37 +117,44 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         super(SimulationHandler, self).__init__(*args, **kwargs)
         self.sim_process = None
         self.clients = dict()
+        # we have to do a bunch of weird stuff to make sure we can share
+        # the simulator object between processes
         self.node_manager = multiprocessing.Manager()
+        # this lock is mostly due to paranoia, I've yet to see evidence
+        # where not using a lock would be a problem
         self.node_lock = multiprocessing.Lock()
         self.node_vals = self.node_manager.dict()
         self.message_count = 0
-        self.time_gap = 10 # amount in milliseconds to wait between messages
+        # amount in milliseconds to wait between messages
+        # if reduced beyond this point then D3.js has a hard time keeping up
+        self.time_gap = 10
 
     def open(self, *args):
         """Callback for when the connection is opened."""
         self.id = self.get_argument("Id")
         self.stream.set_nodelay(True)
-        #self.clients[self.id] = {"id": self.id, "object": self} # Not necessary?
         self._is_closed = False
 
         dt = 0.001
 
-        # Build the model and simulator
+        # Build the model and simulator in a seperate process
         simulator = nengo.Simulator(model_container.model, dt)
+        # it's very useful to run this code without multiple processes when
+        # debuggin
         #self._run_simulator(simulator)
         self.sim_process = multiprocessing.Process(target=self._run_simulator, args=(simulator,))
         self.sim_process.start()
 
 
     def _run_simulator(self, simulator):
-        """Advances the simulator one step"""
+        """Advances the simulator one step and sends results"""
         last_message_time = datetime.datetime.now()
         while not self._is_closed:
+            # check to see if any of the inputs need to be over-ridden
             if(self.node_vals.items() != []):
                 self.node_lock.acquire()
                 # go through the network changing all of the original functions into overrideable ones
                 for node_name, value in self.node_vals.items():
-                    # Am I dealing with a copy of the simulator and the overrides? Does it matter? As long as the name association is maintained?
                     #print("overriding %s" %model_container.name_input_map[node_name])
                     new_node_val = self.node_vals.pop(node_name)
                     print("new_node_val={%s}" %new_node_val)
@@ -181,6 +188,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         """Receive the input information"""
         message = json.loads(message)
         self.node_lock.acquire()
+        # add the new node value to the over-ride list
         self.node_vals[message['name']] = message['val']
         print("Result %s" %self.node_vals.items())
         self.message_count += 1
