@@ -1,2 +1,0 @@
-Figure out how to include the appropriate liscences or if that matters at all. I took stuff from d3-slider.
-Include the graph visualization files from Nengo proper

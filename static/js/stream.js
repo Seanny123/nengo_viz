@@ -1,3 +1,4 @@
+// Deal with the websockets and send data to the dispatch
 function stream(ws) {
     ws.onopen = function() {
         console.log("Opening connection...")

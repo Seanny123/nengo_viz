@@ -16,4 +16,5 @@ log.txt
 .idea
 *.class
 tmp.py
+tmp.js
 message_log.txt

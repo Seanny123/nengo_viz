@@ -243,9 +243,12 @@ d3.slider = function sliderModule(sliderName, webSocket) {
             }
           }
         }
+        // Begining of code that Sean wrote
         console.log(sliderName);
+        // send the values via web-socket
         webSocket.send(JSON.stringify({"name":sliderName, "val":slider.value()}));
         console.log(slider.value());
+        // End of code that sean wrote
       }
 
 

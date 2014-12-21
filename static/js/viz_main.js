@@ -1,1 +1,0 @@
-d3.select('#slider9').call(d3.slider().value( [10, 30] ).orientation("vertical"));

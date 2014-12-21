@@ -54,7 +54,6 @@
 <div id="visualisation"></div>
 
 <script>
-// TODO: Figure out where the layout load is going to happen.
 var message_count = 0;
 var responseJson;
 var modelJson;
@@ -71,6 +70,7 @@ genChart("#visualisation", ["inputA_probe"], "bar", probeDispatch);
 
 var ws = new WebSocket("ws://localhost:8082/simulate?Id=1234534449");
 
+// using an HTTP request get the layout and other info from the model
 console.log("getting the JSON of the model");
 var xhr = new XMLHttpRequest();
 xhr.open('POST', '/graph.json', true);
@@ -86,6 +86,7 @@ function update_graph(){
     nameLog = responseJson[1];
     console.log(JSON.parse(this.responseText));
     console.log("done receiving JSON");
+    // extract all the input nodes
     modelJson.nodes.forEach(function(nde){
         console.log("node");
         if(nde['is_input'] === true){
@@ -96,6 +97,7 @@ function update_graph(){
     genSlider("#input1", inputNodes["inputA"]['id'], "inputA");
     genSlider("#input2", inputNodes["inputB"]['id'], "inputB");
 }
+// start streaming from the established websocket
 stream(ws);
 </script>
 

@@ -35,9 +35,10 @@ import sys
 #import pydevd
 
 def get_milliseconds_diff(start, end):
+    diff = start - end
     return (
-            ((start.days - end.days) * 24 * 60 * 60 + (start.seconds - end.seconds)) * 1000
-            + (start.microseconds - end.microseconds) / 1000.0
+            (diff.days * 24 * 60 * 60 + diff.seconds) * 1000
+            + diff.microseconds / 1000.0
            )
 
 # A function that will return the result of the original function, unless it has ben overriden
@@ -120,7 +121,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
         self.node_lock = multiprocessing.Lock()
         self.node_vals = self.node_manager.dict()
         self.message_count = 0
-        self.time_gap = 100 # amount in milliseconds to wait between messages
+        self.time_gap = 10 # amount in milliseconds to wait between messages
 
     def open(self, *args):
         """Callback for when the connection is opened."""
@@ -140,7 +141,7 @@ class SimulationHandler(tornado.websocket.WebSocketHandler):
 
     def _run_simulator(self, simulator):
         """Advances the simulator one step"""
-        last_message_time = 0
+        last_message_time = datetime.datetime.now()
         while not self._is_closed:
             if(self.node_vals.items() != []):
                 self.node_lock.acquire()

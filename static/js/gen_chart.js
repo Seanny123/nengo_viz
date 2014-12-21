@@ -1,4 +1,5 @@
 // Given a location for inserting the chart and which probes to listen to generate a chart
+// The most recent version is in the min_viz repository.
 // TODO: this function should return a D3 object so the outside code can manage it's location
 function genChart(selector, probeLabelList, label, probeDispatch){
 
